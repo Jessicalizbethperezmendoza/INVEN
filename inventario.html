@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario - La Sagrada Familia</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            background-color: #f0e5ff; /* Fondo claro */
+            color: #333;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .product-form {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .product-form h2 {
+            margin-top: 0;
+            color: #572364; /* Color morado para el título */
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input[type="text"],
+        input[type="number"],
+        input[type="file"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #572364; /* Color morado para el botón */
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #4a1f4c; /* Color morado más oscuro al pasar el ratón */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #572364; /* Encabezado de tabla en morado */
+            color: white; /* Texto blanco en encabezado */
+        }
+        td img {
+            max-width: 80px; /* Tamaño de las imágenes */
+            cursor: pointer; /* Cambia el cursor al pasar sobre la imagen */
+        }
+        .hidden {
+            display: none; /* Ocultar tabla */
+        }
+
+        /* Estilo para la vista previa de la imagen */
+        #product-preview {
+          max-width: 150px; /* Tamaño máximo para la vista previa */
+          height: auto; /* Mantener proporciones */
+          display:none; /* Inicialmente oculto */
+      }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Inventario - La Sagrada Familia</h1>
+    </header>
+
+    <main>
+        <div class="product-form">
+            <h2>Agregar Producto</h2>
+
+            <label for="product-name">Nombre del Producto</label>
+            <input type="text" id="product-name" placeholder="Nombre del producto" required>
+
+            <label for="product-quantity">Cantidad Recibida</label>
+            <input type="number" id="product-quantity" placeholder="Cantidad" required>
+
+            <label for="product-original-price">Precio Original ($)</label>
+            <input type="number" id="product-original-price" placeholder="Precio original" step="0.01" required>
+
+            <label for="product-sale-price">Precio de Venta ($)</label>
+            <input type="number" id="product-sale-price" placeholder="Precio de venta" step="0.01" required>
+
+            <label for="product-photo">Foto del Producto</label>
+            <input type="file" id="product-photo" accept="image/*" required>
+            
+             <!-- Vista previa de la imagen -->
+             <img id="product-preview" src="" alt="Vista previa de la imagen">
+
+             <button onclick="addProduct()">➕ Agregar al Inventario</button>
+         </div>
+
+         <!-- Botón para mostrar/ocultar el inventario -->
+         <button onclick="toggleInventory()">📦 Ver Inventario</button>
+
+         <!-- Botón para imprimir el inventario -->
+         <button onclick="printInventory()">🖨️ Imprimir Inventario</button>
+
+         <!-- Botón para exportar a PDF -->
+         <button onclick="exportToPDF()">📄 Exportar a PDF</button>
+
+         <table class="product-table hidden" id="product-table">
+             <thead>
+                 <tr>
+                     <th>Foto</th>
+                     <th>Nombre</th>
+                     <th>Cantidad Recibida</th>
+                     <th>Precio Original ($)</th>
+                     <th>Precio de Venta ($)</th>
+                     <th>Costo Total ($)</th> <!-- Nueva columna para Costo Total -->
+                     <th>Ganancia ($)</th> <!-- Nueva columna para Ganancia -->
+                     <th>Acciones</th>
+                 </tr>
+             </thead>
+             <tbody>
+                 <!-- Los productos se agregarán aquí -->
+             </tbody>
+         </table>
+
+     </main>
+
+     <!-- Funciones para manejar productos -->
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> <!-- Importar jsPDF -->
+     <script>
+       document.getElementById('product-photo').addEventListener('change', function(event) {
+           const reader = new FileReader();
+           reader.onload = function() {
+               const output = document.getElementById('product-preview');
+               output.src = reader.result;
+               output.style.display = 'block';
+           };
+           reader.readAsDataURL(event.target.files[0]);
+       });
+
+       function addProduct() {
+           const productName = document.getElementById('product-name').value;
+           const productQuantity = parseInt(document.getElementById('product-quantity').value);
+           const productOriginalPrice = parseFloat(document.getElementById('product-original-price').value);
+           const productSalePrice = parseFloat(document.getElementById('product-sale-price').value);
+           const productPhoto = document.getElementById('product-preview').src;
+
+           if (productName && productQuantity && !isNaN(productOriginalPrice) && !isNaN(productSalePrice) && productPhoto) {
+               const productTableBody = document.querySelector('#product-table tbody');
+
+               // Calcular Costo Total y Ganancia
+               const totalCost = productOriginalPrice * productQuantity; // Costo Total
+               const profit = (productSalePrice - productOriginalPrice) * productQuantity; // Ganancia
+
+               const row = document.createElement('tr');
+               row.innerHTML = `
+                   <td><img src="${productPhoto}" alt="${productName}" onclick="viewImage('${productPhoto}')"></td> <!-- Clickable image -->
+                   <td>${productName}</td>
+                   <td>${productQuantity}</td> <!-- Mostrar cantidad como entero -->
+                   <td>${productOriginalPrice.toFixed(2)} €</td> <!-- Formato de precio -->
+                   <td>${productSalePrice.toFixed(2)} €</td> <!-- Formato de precio -->
+                   <td>${totalCost.toFixed(2)} €</td> <!-- Costo Total -->
+                   <td>${profit.toFixed(2)} €</td> <!-- Ganancia -->
+                   <td><button onclick="removeProduct(this)">🗑️ Eliminar</button></td>
+               `;
+
+               productTableBody.appendChild(row);
+
+               // Limpiar los campos del formulario
+               document.getElementById('product-name').value = '';
+               document.getElementById('product-quantity').value = '';
+               document.getElementById('product-original-price').value = '';
+               document.getElementById('product-sale-price').value = '';
+               document.getElementById('product-photo').value = '';
+               document.getElementById('product-preview').style.display = 'none';
+
+               // Desplazar a la tabla del inventario
+               scrollToInventory();
+               
+           } else {
+               alert('Por favor, completa todos los campos y sube una imagen.');
+           }
+       }
+
+       function viewImage(src) {
+           const imgWindow = window.open("", "Vista Previa", "width=600,height=400");
+           imgWindow.document.write(`<title>Vista Previa de Imagen</title><img src="${src}" style="width:100%; height:auto;">`);
+       }
+
+       function removeProduct(button) {
+           const row = button.parentElement.parentElement;
+           row.remove();
+       }
+
+       function toggleInventory() {
+           const table = document.getElementById('product-table');
+           table.classList.toggle('hidden');
+       }
+
+       function scrollToInventory() {
+           const table = document.getElementById('product-table');
+           table.scrollIntoView({ behavior: 'smooth' });
+           toggleInventory(); // Asegúrate de que la tabla esté visible
+       }
+
+       function printInventory() {
+           const printContents = document.querySelector('#product-table').outerHTML; // Obtener HTML de la tabla
+           const newWindow = window.open('', '', 'height=600,width=800');
+           newWindow.document.write('<html><head><title>Imprimir Inventario</title>');
+           newWindow.document.write('</head><body >');
+           newWindow.document.write(printContents);
+           newWindow.document.write('</body></html>');
+           newWindow.document.close();
+           newWindow.print();
+       }
+
+       async function exportToPDF() {
+           const { jsPDF } = window.jspdf;
+
+           const pdf = new jsPDF();
+           
+           pdf.setFontSize(16);
+           pdf.text("Inventario - La Sagrada Familia", 10, 10);
+           
+           pdf.setFontSize(12);
+           
+           let yOffset = 20;
+
+           // Crear encabezados para la tabla
+           pdf.setFontSize(12);
+           
+           // Encabezados
+           pdf.setFillColor(87, 35, 100); // Color morado
+           pdf.rect(10, yOffset, 190, 10, 'F'); // Fondo del encabezado
+           
+           pdf.setTextColor(255); // Texto blanco
+           pdf.text("Nombre del Producto", 10, yOffset + 7);
+           pdf.text("Precio de Venta", 100, yOffset + 7);
+           pdf.text("Imagen", 160, yOffset + 7);
+           
+           yOffset += 20;
+
+           // Obtener los datos de la tabla
+           const rows = Array.from(document.querySelectorAll('#product-table tbody tr'));
+           
+           for (const row of rows) {
+               const cols = Array.from(row.querySelectorAll('td'));
+               
+               // Obtener nombre y precio
+               const productName = cols[1].innerText; // Nombre del producto
+               const productSalePrice = cols[4].innerText; // Precio de venta
+               const imgSrc = cols[0].querySelector('img').src; // Fuente de la imagen
+
+               // Añadir nombre del producto y precio al PDF
+               pdf.setTextColor(0); // Texto negro
+               pdf.text(productName, 10, yOffset);
+               pdf.text(productSalePrice, 100, yOffset);
+
+               // Añadir imagen al PDF (más pequeña)
+               const imgData = await getBase64Image(imgSrc);
+               pdf.addImage(imgData, 'JPEG', 160, yOffset - 10, 30, 30); // Tamaño ajustado a (30x30)
+
+               yOffset += 40; // Espacio entre productos
+               
+               if (yOffset > pdf.internal.pageSize.height - 50) { // Si se llena la página
+                   pdf.addPage(); // Añadir nueva página
+                   yOffset = 10; // Reiniciar offset vertical
+                   pdf.setFontSize(16);
+                   pdf.text("Inventario - La Sagrada Familia", 10, yOffset); // Repetir título en nueva página
+                   yOffset += 10; // Espacio después del título
+
+                   // Repetir encabezados en nueva página
+                   pdf.setFillColor(87, 35, 100); 
+                   pdf.rect(10, yOffset, 190, 10, 'F'); 
+                   
+                   pdf.setTextColor(255); 
+                   pdf.text("Nombre del Producto", 10, yOffset + 7);
+                   pdf.text("Precio de Venta", 100, yOffset + 7);
+                   pdf.text("Imagen", 160, yOffset + 7);
+                   
+                   yOffset += 20; 
+               }
+          }
+
+          pdf.save("inventario.pdf");
+      }
+
+      function getBase64Image(imgSrc) {
+          return new Promise((resolve) => {
+              const img = new Image();
+              img.crossOrigin = "Anonymous"; // Permitir CORS
+              img.onload = () => {
+                  const canvas = document.createElement("canvas");
+                  canvas.width = img.width;
+                  canvas.height = img.height;
+
+                  const ctx = canvas.getContext("2d");
+                  ctx.drawImage(img, 0, 0);
+
+                  const dataURL = canvas.toDataURL("image/jpeg");
+                  resolve(dataURL.split(',')[1]); // Retornar solo la parte base64
+              };
+              img.src = imgSrc; 
+          });
+      }
+    </script>
+
+</body>
+</html>
